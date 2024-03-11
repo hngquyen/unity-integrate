@@ -1,10 +1,12 @@
 package com.unity3d.player;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.os.Bundle;
+import android.os.Build;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -12,9 +14,9 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.os.Process;
 
-public class UnityPlayerActivity extends Activity implements IUnityPlayerLifecycleEvents
+public class UnityPlayerActivity extends Activity implements IUnityPlayerLifecycleEvents, IUnityPermissionRequestSupport, IUnityPlayerSupport
 {
-    protected UnityPlayer mUnityPlayer; // don't change the name of this variable; referenced from native code
+    protected UnityPlayerForActivityOrService mUnityPlayer; // don't change the name of this variable; referenced from native code
 
     // Override this in your custom UnityPlayerActivity to tweak the command line arguments passed to the Unity Android Player
     // The command line arguments are passed as a string, separated by spaces
@@ -37,9 +39,14 @@ public class UnityPlayerActivity extends Activity implements IUnityPlayerLifecyc
         String cmdLine = updateUnityCommandLineArguments(getIntent().getStringExtra("unity"));
         getIntent().putExtra("unity", cmdLine);
 
-        mUnityPlayer = new UnityPlayer(this, this);
-        setContentView(mUnityPlayer);
-        mUnityPlayer.requestFocus();
+        mUnityPlayer = new UnityPlayerForActivityOrService(this, this);
+        setContentView(mUnityPlayer.getFrameLayout());
+        mUnityPlayer.getFrameLayout().requestFocus();
+    }
+
+    @Override 
+    public UnityPlayerForActivityOrService getUnityPlayerConnection() {
+        return mUnityPlayer;
     }
 
     // When Unity player unloaded move task to background
@@ -116,23 +123,6 @@ public class UnityPlayerActivity extends Activity implements IUnityPlayerLifecyc
         mUnityPlayer.resume();
     }
 
-    // Low Memory Unity
-    @Override public void onLowMemory()
-    {
-        super.onLowMemory();
-        mUnityPlayer.lowMemory();
-    }
-
-    // Trim Memory Unity
-    @Override public void onTrimMemory(int level)
-    {
-        super.onTrimMemory(level);
-        if (level == TRIM_MEMORY_RUNNING_CRITICAL)
-        {
-            mUnityPlayer.lowMemory();
-        }
-    }
-
     // This ensures the layout will be correct.
     @Override public void onConfigurationChanged(Configuration newConfig)
     {
@@ -156,9 +146,22 @@ public class UnityPlayerActivity extends Activity implements IUnityPlayerLifecyc
         return super.dispatchKeyEvent(event);
     }
 
+    @Override
+    @TargetApi(Build.VERSION_CODES.M)
+    public void requestPermissions(PermissionRequest request)
+    {
+        int requestCode = mUnityPlayer.addPermissionRequest(request);
+        requestPermissions(request.getPermissionNames(), requestCode);
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults)
+    {
+        mUnityPlayer.permissionResponse(this, requestCode, permissions, grantResults);
+    }
+
     // Pass any events not handled by (unfocused) views straight to UnityPlayer
-    @Override public boolean onKeyUp(int keyCode, KeyEvent event)     { return mUnityPlayer.injectEvent(event); }
-    @Override public boolean onKeyDown(int keyCode, KeyEvent event)   { return mUnityPlayer.injectEvent(event); }
-    @Override public boolean onTouchEvent(MotionEvent event)          { return mUnityPlayer.injectEvent(event); }
-    /*API12*/ public boolean onGenericMotionEvent(MotionEvent event)  { return mUnityPlayer.injectEvent(event); }
+    @Override public boolean onKeyUp(int keyCode, KeyEvent event)     { return mUnityPlayer.getFrameLayout().onKeyUp(keyCode, event); }
+    @Override public boolean onKeyDown(int keyCode, KeyEvent event)   { return mUnityPlayer.getFrameLayout().onKeyDown(keyCode, event); }
+    @Override public boolean onTouchEvent(MotionEvent event)          { return mUnityPlayer.getFrameLayout().onTouchEvent(event); }
+    @Override public boolean onGenericMotionEvent(MotionEvent event)  { return mUnityPlayer.getFrameLayout().onGenericMotionEvent(event); }
 }

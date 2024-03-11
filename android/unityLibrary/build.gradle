@@ -1,29 +1,28 @@
 apply plugin: 'com.android.library'
 
-
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-
 }
 
 android {
-    compileSdkVersion 30
-    buildToolsVersion '30.0.2'
+    compileSdkVersion 33
+    buildToolsVersion "32.0.0"
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     defaultConfig {
-        minSdkVersion 22
-        targetSdkVersion 30
-        ndk {
-            abiFilters 'armeabi-v7a'
-        }
+        consumerProguardFiles "proguard-unity.txt"
+        versionName "0.1"
+        minSdkVersion 23
+        targetSdkVersion 33
         versionCode 1
-        versionName '0.1'
-        consumerProguardFiles 'proguard-unity.txt'
+
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a"
+        }
     }
 
     lintOptions {
@@ -31,14 +30,15 @@ android {
     }
 
     aaptOptions {
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
         noCompress = ['.unity3d', '.ress', '.resource', '.obb', '.bundle', '.unityexp'] + unityStreamingAssets.tokenize(', ')
-        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~"
     }
 
     packagingOptions {
-        doNotStrip '*/armeabi-v7a/*.so'
+        doNotStrip "*/armeabi-v7a/*.so"
+        doNotStrip "*/arm64-v8a/*.so"
     }
+
+    namespace "com.unity3d.player"
 }
-
-
 
